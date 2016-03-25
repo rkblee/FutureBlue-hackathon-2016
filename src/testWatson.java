@@ -27,6 +27,7 @@ import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.TargetDataLine;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -116,6 +117,7 @@ public class testWatson {
 	// South UI (button)
 	JPanel south_panel = new JPanel();
 	frame.getContentPane().add(south_panel, BorderLayout.SOUTH);
+	// Start button
 	JButton start = new JButton("Start");
 	start.addActionListener(new ActionListener()
 	{
@@ -127,20 +129,24 @@ public class testWatson {
 		}
 	  }
 	});
-	
 	south_panel.add(start);
+	// Stop button
 	JButton stop = new JButton("Stop");
 	stop.addActionListener(new ActionListener()
 	{
 	  public void actionPerformed(ActionEvent e)
 	  {
 		if (showenable) {
-			textArea.append("Speech to Audio service is disabled." + newline + newline);
+			textArea.append(newline + "Speech to Audio service is disabled." + newline + newline);
 	    	showenable = false;
 		}
 	  }
 	});
 	south_panel.add(stop);
+	// Drop down for language
+	String[] language = { "No translation","Korean", "Chinese","Japanes","French","Spanish","German","Italian"};
+	JComboBox <String>comboBox = new JComboBox<String>(language);
+	south_panel.add(comboBox);
 	
 	frame.setVisible(true);
 	textArea.append("Please click Start button" + newline + newline);
@@ -156,7 +162,7 @@ public class testWatson {
 	        breakSpeech = result.getBoolean("final");
 	        JSONObject transcript = obj.getJSONArray("results").getJSONObject(0).getJSONArray("alternatives").getJSONObject(0);
 	        trans = transcript.getString("transcript");
-	        text = translator.translte(trans, "en", "ko");
+	        text = translator.translte(trans, translate_language((String) comboBox.getSelectedItem()), "ko");
     	    if (breakSpeech && showenable) textArea.append(trans + tab + tab + time() + newline + text + newline);
 
           if (speechResults.isFinal())
@@ -177,5 +183,38 @@ public class testWatson {
 	  DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 	  Calendar cal = Calendar.getInstance();
 	  return (String) dateFormat.format(cal.getTime());
+  }
+  
+  public static String translate_language(String lan) {
+	  String lan_selection = "disable";
+	  switch (lan) {
+	  case "No translation":
+		  lan_selection = "disable";
+		  break;
+	  case "Korean":
+		  lan_selection = "ko";
+		  break;
+	  case "Chinese":
+		  lan_selection = "zh-CN";
+		  break;
+	  case "Japanese":
+		  lan_selection = "ja";
+		  break;
+	  case "French":
+		  lan_selection = "fr";
+		  break;
+	  case "Spanish":
+		  lan_selection = "es";
+		  break;
+	  case "German":
+		  lan_selection = "de";
+		  break;
+	  case "Italian":
+		  lan_selection = "it";
+		  break;
+	  }
+	  
+	  System.out.println(lan_selection);
+	  return lan_selection;
   }
 }
