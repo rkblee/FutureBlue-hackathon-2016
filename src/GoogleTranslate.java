@@ -1,4 +1,4 @@
-package testWatson;
+package watson;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;

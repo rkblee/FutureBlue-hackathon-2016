@@ -1,12 +1,38 @@
+package watson;
+
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridBagLayout;
+import java.awt.Image;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import javax.imageio.ImageIO;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.TargetDataLine;
+import javax.swing.ImageIcon;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTextArea;
+import javax.swing.text.DefaultCaret;
+
+import org.json.JSONObject;
 
 import com.ibm.watson.developer_cloud.speech_to_text.v1.RecognizeOptions;
 import com.ibm.watson.developer_cloud.speech_to_text.v1.SpeechToText;
@@ -18,8 +44,17 @@ import com.ibm.watson.developer_cloud.speech_to_text.v1.websocket.BaseRecognizeD
  */
 public class testWatson {
   private static CountDownLatch lock = new CountDownLatch(1);
-
+  
+  // For UI
+  private static JTextArea textArea;
+  private static JFrame frame;
+  private final static String newline = "\n";
+  private final static String tab = "\t";
+  
   public static void main(String[] args) throws LineUnavailableException, InterruptedException {
+	// For translator
+	final GoogleTranslate translator = new GoogleTranslate("AIzaSyDbfojTKoEHKfhRpoI8WodIRgAviavfdAA");
+	  
     SpeechToText service = new SpeechToText();
     service.setUsernameAndPassword("48b325a3-b2ca-472f-a510-1f3bcc74997d", "sIRBfNLk8nXd");
 
@@ -28,18 +63,71 @@ public class testWatson {
 
     AudioInputStream ais;
     TargetDataLine targetDataLine;
-
 	AudioFormat audioFormat = new AudioFormat(48000, 16, 2, true, true);
     DataLine.Info dataLineInfo = new DataLine.Info(TargetDataLine.class, audioFormat);
     targetDataLine = (TargetDataLine) AudioSystem.getLine(dataLineInfo);
     targetDataLine.open(audioFormat);
     targetDataLine.start();
     ais = new AudioInputStream(targetDataLine);
+
+    // Create UI
+    frame = new JFrame("Speach to Text for IBM");
+	frame.setBounds(100, 100, 600, 700);
+	frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+	
+	// Create textarea
+    textArea = new JTextArea();
+	textArea.setEditable(false);
+	//textArea.setColumns(50);
+	textArea.setLineWrap(true);
+	textArea.setWrapStyleWord(true);
+	textArea.setBackground(Color.WHITE);
+	JScrollPane scrollPane = new JScrollPane(textArea);
+	new SmartScroller(scrollPane);
+	frame.getContentPane().add(scrollPane, BorderLayout.CENTER);
+
+	// Top UI
+	JPanel top_panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+	top_panel.setBackground(Color.WHITE);
+	frame.getContentPane().add(top_panel, BorderLayout.NORTH);
+	JLabel logo = new JLabel();
+	// Load logo
+	BufferedImage raw_image = null;
+	try {
+		raw_image = ImageIO.read(new File("lib/logo.jpg"));
+	} catch (IOException e) {
+		e.printStackTrace();
+	}
+	// Resize logo and set logo
+	Image sized_image = raw_image.getScaledInstance(100, 50, Image.SCALE_SMOOTH);
+	ImageIcon logo_image = new ImageIcon(sized_image);
+	logo.setIcon(logo_image);
+	top_panel.add(logo);
+	// Application name
+	JLabel app_name = new JLabel("Speach to Text for IBM");
+	app_name.setFont(new Font("Tahoma", Font.BOLD, 15));
+	app_name.setBackground(Color.WHITE);
+	top_panel.add(app_name);
+	
+	frame.setVisible(true);
+	textArea.append("Speech to Audio service starting now. You can speak now" + newline + newline);
     
     service.recognizeUsingWebSockets(ais, options, new BaseRecognizeDelegate() {
+    	String text, trans;
+    	Boolean breakSpeech;
+
         @Override
         public void onMessage(SpeechResults speechResults) {
-          System.out.println(speechResults);
+        	JSONObject obj = new JSONObject(speechResults);
+	        JSONObject result = obj.getJSONArray("results").getJSONObject(0);
+	        breakSpeech = result.getBoolean("final");
+	        
+	        JSONObject transcript = obj.getJSONArray("results").getJSONObject(0).getJSONArray("alternatives").getJSONObject(0);
+	        trans = transcript.getString("transcript");
+	        
+	        text = translator.translte(trans, "en", "ko");
+    	    if (breakSpeech) textArea.append(trans + tab + tab + time() + newline + text + newline);
+
           if (speechResults.isFinal())
             lock.countDown();
         }
@@ -52,5 +140,11 @@ public class testWatson {
 
       lock.await(20000, TimeUnit.MILLISECONDS);
     
+  }
+  
+  public static String time() {
+	  DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+	  Calendar cal = Calendar.getInstance();
+	  return (String) dateFormat.format(cal.getTime());
   }
 }
