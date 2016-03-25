@@ -7,6 +7,8 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagLayout;
 import java.awt.Image;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -24,6 +26,7 @@ import javax.sound.sampled.DataLine;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.TargetDataLine;
 import javax.swing.ImageIcon;
+import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -52,25 +55,7 @@ public class testWatson {
   private final static String tab = "\t";
   
   public static void main(String[] args) throws LineUnavailableException, InterruptedException {
-	// For translator
-	final GoogleTranslate translator = new GoogleTranslate("AIzaSyDbfojTKoEHKfhRpoI8WodIRgAviavfdAA");
-	  
-    SpeechToText service = new SpeechToText();
-    service.setUsernameAndPassword("48b325a3-b2ca-472f-a510-1f3bcc74997d", "sIRBfNLk8nXd");
-
-    RecognizeOptions options = new RecognizeOptions();
-    options.continuous(true).interimResults(true).contentType("audio/l16; rate=48000; channels=2");
-
-    AudioInputStream ais;
-    TargetDataLine targetDataLine;
-	AudioFormat audioFormat = new AudioFormat(48000, 16, 2, true, true);
-    DataLine.Info dataLineInfo = new DataLine.Info(TargetDataLine.class, audioFormat);
-    targetDataLine = (TargetDataLine) AudioSystem.getLine(dataLineInfo);
-    targetDataLine.open(audioFormat);
-    targetDataLine.start();
-    ais = new AudioInputStream(targetDataLine);
-
-    // Create UI
+	// Create UI
     frame = new JFrame("Speach to Text for IBM");
 	frame.setBounds(100, 100, 600, 700);
 	frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -109,37 +94,36 @@ public class testWatson {
 	app_name.setBackground(Color.WHITE);
 	top_panel.add(app_name);
 	
+	// South UI (button)
+	JPanel south_panel = new JPanel();
+	frame.getContentPane().add(south_panel, BorderLayout.SOUTH);
+	// Declar watson thread
+	watson_thread watson = new watson_thread(textArea);
+	// Start button
+	JButton start = new JButton("Start");
+	start.addActionListener(new ActionListener()
+	{
+	  public void actionPerformed(ActionEvent e)
+	  {
+	    textArea.append("Speech to Audio service is enabled now. You can speak now" + newline + newline);
+	    watson.start();
+	  }
+	});
+	south_panel.add(start);
+	// Stop button
+	JButton stop = new JButton("Stop");
+	stop.addActionListener(new ActionListener()
+	{
+		public void actionPerformed(ActionEvent e)
+		{
+			textArea.append("Speech to Audio service is disabled now." + newline + newline);
+			watson.interrupt();
+		}
+	});
+	south_panel.add(stop);
+	
 	frame.setVisible(true);
-	textArea.append("Speech to Audio service starting now. You can speak now" + newline + newline);
-    
-    service.recognizeUsingWebSockets(ais, options, new BaseRecognizeDelegate() {
-    	String text, trans;
-    	Boolean breakSpeech;
-
-        @Override
-        public void onMessage(SpeechResults speechResults) {
-        	JSONObject obj = new JSONObject(speechResults);
-	        JSONObject result = obj.getJSONArray("results").getJSONObject(0);
-	        breakSpeech = result.getBoolean("final");
-	        
-	        JSONObject transcript = obj.getJSONArray("results").getJSONObject(0).getJSONArray("alternatives").getJSONObject(0);
-	        trans = transcript.getString("transcript");
-	        
-	        text = translator.translte(trans, "en", "ko");
-    	    if (breakSpeech) textArea.append(trans + tab + tab + time() + newline + text + newline);
-
-          if (speechResults.isFinal())
-            lock.countDown();
-        }
-        
-        @Override
-        public void onError(Exception e) {
-        	e.printStackTrace();
-        }
-      });
-
-      lock.await(20000, TimeUnit.MILLISECONDS);
-    
+	textArea.append("Please click Start button" + newline + newline);
   }
   
   public static String time() {
