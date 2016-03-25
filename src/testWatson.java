@@ -125,10 +125,4 @@ public class testWatson {
 	frame.setVisible(true);
 	textArea.append("Please click Start button" + newline + newline);
   }
-  
-  public static String time() {
-	  DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-	  Calendar cal = Calendar.getInstance();
-	  return (String) dateFormat.format(cal.getTime());
-  }
 }

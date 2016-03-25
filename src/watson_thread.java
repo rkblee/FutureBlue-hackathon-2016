@@ -1,5 +1,8 @@
 package watson;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.concurrent.CountDownLatch;
 
 import javax.sound.sampled.AudioFormat;
@@ -20,6 +23,8 @@ import com.ibm.watson.developer_cloud.speech_to_text.v1.websocket.BaseRecognizeD
 public class watson_thread extends Thread {
 	private static JTextArea textArea2;
 	private static CountDownLatch lock = new CountDownLatch(1);
+	private final static String newline = "\n";
+	private final static String tab = "\t";
 
 	
 	public watson_thread(JTextArea textArea) {
@@ -27,6 +32,8 @@ public class watson_thread extends Thread {
 	}
 	
 	public void run() {
+	    final GoogleTranslate translator = new GoogleTranslate("AIzaSyDbfojTKoEHKfhRpoI8WodIRgAviavfdAA");
+
 		SpeechToText service = new SpeechToText();
 		service.setUsernameAndPassword("48b325a3-b2ca-472f-a510-1f3bcc74997d", "sIRBfNLk8nXd");
 
@@ -57,8 +64,8 @@ public class watson_thread extends Thread {
 				JSONObject transcript = obj.getJSONArray("results").getJSONObject(0).getJSONArray("alternatives").getJSONObject(0);
 				trans = transcript.getString("transcript");
 				        
-				//text = translator.translte(trans, "en", "ko");
-				if (breakSpeech) textArea2.append(trans);
+				text = translator.translte(trans, "en", "ko");
+				if (breakSpeech) textArea2.append(trans+tab+tab+time()+newline+text+tab+tab+time()+newline);
 
 				if (speechResults.isFinal())
 				lock.countDown();
@@ -74,4 +81,10 @@ public class watson_thread extends Thread {
 		e1.printStackTrace();
 	}
 	}
+	
+	  public static String time() {
+		  DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+		  Calendar cal = Calendar.getInstance();
+		  return (String) dateFormat.format(cal.getTime());
+	  }
 }
