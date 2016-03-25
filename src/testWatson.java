@@ -117,6 +117,11 @@ public class testWatson {
 	// South UI (button)
 	JPanel south_panel = new JPanel();
 	frame.getContentPane().add(south_panel, BorderLayout.SOUTH);
+	JLabel user_label = new JLabel("User");
+	south_panel.add(user_label);
+	JTextArea user = new JTextArea();
+	south_panel.add(user);
+	user.setColumns(10);
 	// Start button
 	JButton start = new JButton("Start");
 	start.addActionListener(new ActionListener()
@@ -144,7 +149,7 @@ public class testWatson {
 	});
 	south_panel.add(stop);
 	// Drop down for language
-	String[] language = { "No translation","Korean", "Chinese","Japanes","French","Spanish","German","Italian"};
+	String[] language = { "No translation","Korean", "Chinese","Japanese","French","Spanish","German","Italian"};
 	JComboBox <String>comboBox = new JComboBox<String>(language);
 	south_panel.add(comboBox);
 	
@@ -162,11 +167,19 @@ public class testWatson {
 	        breakSpeech = result.getBoolean("final");
 	        JSONObject transcript = obj.getJSONArray("results").getJSONObject(0).getJSONArray("alternatives").getJSONObject(0);
 	        trans = transcript.getString("transcript");
-	        text = translator.translte(trans, translate_language((String) comboBox.getSelectedItem()), "ko");
-    	    if (breakSpeech && showenable) textArea.append(trans + tab + tab + time() + newline + text + newline);
+	        String lan = (String) comboBox.getSelectedItem();
+	        String lan_select = translate_language(lan);
+	    	String username = user.getText();
+	        if (breakSpeech && showenable) {
+	        	if (lan_select == "disable") textArea.append(time()+tab+username+" : "+trans+tab+tab+newline+newline);
+	        	else {
+	        		text = translator.translte(trans, "en", lan_select);
+	        		textArea.append(time()+tab+username+" : "+trans+tab+tab+newline+"["+lan+"]"+tab+text+newline+newline);
+	        	}
+	        }
 
-          if (speechResults.isFinal())
-            lock.countDown();
+	        if (speechResults.isFinal())
+	        	lock.countDown();
         }
         
         @Override
@@ -180,7 +193,7 @@ public class testWatson {
   }
   
   public static String time() {
-	  DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+	  DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
 	  Calendar cal = Calendar.getInstance();
 	  return (String) dateFormat.format(cal.getTime());
   }
@@ -213,8 +226,6 @@ public class testWatson {
 		  lan_selection = "it";
 		  break;
 	  }
-	  
-	  System.out.println(lan_selection);
 	  return lan_selection;
   }
 }
