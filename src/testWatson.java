@@ -9,6 +9,8 @@ import java.awt.GridBagLayout;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -117,41 +119,61 @@ public class testWatson {
 	// South UI (button)
 	JPanel south_panel = new JPanel();
 	frame.getContentPane().add(south_panel, BorderLayout.SOUTH);
+	south_panel.setLayout(new BorderLayout(0, 0));
+	
+	// User panel (WEST)
+	JPanel user_panel = new JPanel();
+	south_panel.add(user_panel, BorderLayout.WEST);
 	JLabel user_label = new JLabel("User");
-	south_panel.add(user_label);
+	user_panel.add(user_label);
 	JTextArea user = new JTextArea();
-	south_panel.add(user);
+	user.setText("Guest");
+	user_panel.add(user);
 	user.setColumns(10);
+	// Chat panel (CENTER)
+	JPanel chat_panel = new JPanel();
+	south_panel.add(chat_panel, BorderLayout.CENTER);
+	JLabel chat_label = new JLabel("Message");
+	chat_panel.add(chat_label);
+	JTextArea chat = new JTextArea(2,25);
+	// Enter key listener
+	KeyListener keyListener = new KeyListener() {
+	      public void keyPressed(KeyEvent keyEvent) { }
+	      public void keyReleased(KeyEvent keyEvent) { }
+	      public void keyTyped(KeyEvent keyEvent) { if (keyEvent.getKeyChar() == '\n') { send(chat, user); } }
+	};
+	chat.addKeyListener(keyListener);
+	chat_panel.add(chat);
+	chat.setColumns(25);
+	// Send button panel (EAST)
+	JPanel send_panel = new JPanel();
+	south_panel.add(send_panel, BorderLayout.EAST);
+	JButton send = new JButton("Send");
+	send.addActionListener(new ActionListener()
+	{
+		public void actionPerformed(ActionEvent e) { send(chat, user); }
+	});
+	send_panel.add(send);
 	// Start button
+	JPanel button_panel = new JPanel();
+	south_panel.add(button_panel, BorderLayout.SOUTH);
 	JButton start = new JButton("Start");
 	start.addActionListener(new ActionListener()
 	{
-	  public void actionPerformed(ActionEvent e)
-	  {
-		if (!showenable) {
-		    textArea.append("Speech to Audio service starting now. You can speak now" + newline + newline);
-		    showenable = true;
-		}
-	  }
+	  public void actionPerformed(ActionEvent e) { start(); }
 	});
-	south_panel.add(start);
+	button_panel.add(start);
 	// Stop button
 	JButton stop = new JButton("Stop");
 	stop.addActionListener(new ActionListener()
 	{
-	  public void actionPerformed(ActionEvent e)
-	  {
-		if (showenable) {
-			textArea.append(newline + "Speech to Audio service is disabled." + newline + newline);
-	    	showenable = false;
-		}
-	  }
+	  public void actionPerformed(ActionEvent e) { stop(); }
 	});
-	south_panel.add(stop);
+	button_panel.add(stop);
 	// Drop down for language
 	String[] language = { "No translation","Korean", "Chinese","Japanese","French","Spanish","German","Italian"};
 	JComboBox <String>comboBox = new JComboBox<String>(language);
-	south_panel.add(comboBox);
+	button_panel.add(comboBox);
 	
 	frame.setVisible(true);
 	textArea.append("Please click Start button" + newline + newline);
@@ -170,6 +192,7 @@ public class testWatson {
 	        String lan = (String) comboBox.getSelectedItem();
 	        String lan_select = translate_language(lan);
 	    	String username = user.getText();
+	    	if (username == null) username = "Guest";
 	        if (breakSpeech && showenable) {
 	        	if (lan_select == "disable") textArea.append(time()+tab+username+" : "+trans+tab+tab+newline+newline);
 	        	else {
@@ -227,5 +250,28 @@ public class testWatson {
 		  break;
 	  }
 	  return lan_selection;
+  }
+  
+  public static void send(JTextArea chat, JTextArea user) {
+	String m = chat.getText();
+	String username = user.getText();
+	if (m != null) {
+		textArea.append(time()+tab+username+" : "+m+newline);
+		chat.setText("");
+	}
+  }
+  
+  public static void start() {
+	  if (!showenable) {
+		    textArea.append("Speech to Audio service started. You can speak now"+newline+newline);
+		    showenable = true;
+		}
+  }
+  
+  public static void stop() {
+	  if (showenable) {
+			textArea.append(newline+"Speech to Audio service is disabled."+newline+newline);
+	    	showenable = false;
+		}
   }
 }
