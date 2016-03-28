@@ -1,5 +1,3 @@
-package watson;
-
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -14,10 +12,14 @@ import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import javax.imageio.ImageIO;
@@ -32,6 +34,7 @@ import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
@@ -44,6 +47,10 @@ import com.ibm.watson.developer_cloud.speech_to_text.v1.RecognizeOptions;
 import com.ibm.watson.developer_cloud.speech_to_text.v1.SpeechToText;
 import com.ibm.watson.developer_cloud.speech_to_text.v1.model.SpeechResults;
 import com.ibm.watson.developer_cloud.speech_to_text.v1.websocket.BaseRecognizeDelegate;
+
+import broadcastComm.ClientListener;
+import broadcastComm.ClientSender;
+import broadcastComm.TextPacket;
 
 /**
  * Recognize using WebSockets a sample wav file and print the transcript into the console output.
@@ -61,8 +68,24 @@ public class testWatson {
   public static void main(String[] args) throws LineUnavailableException, InterruptedException {
 	// For translator
 	final GoogleTranslate translator = new GoogleTranslate("AIzaSyDbfojTKoEHKfhRpoI8WodIRgAviavfdAA");
-	  
-    SpeechToText service = new SpeechToText();
+	final String sender = JOptionPane.showInputDialog("name");
+	Socket socket = null;
+	final BlockingQueue<TextPacket> msgQueue = new LinkedBlockingQueue<TextPacket>();
+	
+	try {
+		/* variables for hostname/port */
+		String hostname = JOptionPane.showInputDialog("server hostname");;
+		int port = 8080;
+		socket = new Socket(hostname, port);
+	} catch (UnknownHostException e) {
+		System.err.println("ERROR: Don't know where to connect!!");
+		System.exit(1);
+	} catch (IOException e) {
+		System.err.println("ERROR: Couldn't get I/O for the connection.");
+		System.exit(1);
+	}
+
+	SpeechToText service = new SpeechToText();
     service.setUsernameAndPassword("48b325a3-b2ca-472f-a510-1f3bcc74997d", "sIRBfNLk8nXd");
 
     RecognizeOptions options = new RecognizeOptions();
@@ -93,12 +116,28 @@ public class testWatson {
 	new SmartScroller(scrollPane);
 	frame.getContentPane().add(scrollPane, BorderLayout.CENTER);
 
+	new ClientSender(socket, msgQueue).start();
+	new ClientListener(socket){
+		@Override
+		public void run() {
+			try {
+				TextPacket packetFromServer;
+				while ((packetFromServer = (TextPacket) this.ois.readObject()) != null) {
+					textArea.append(packetFromServer.message);
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+	}.start();
+	
 	// Top UI
 	JPanel top_panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 	top_panel.setBackground(Color.WHITE);
 	frame.getContentPane().add(top_panel, BorderLayout.NORTH);
 	JLabel logo = new JLabel();
 	// Load logo
+	/*
 	BufferedImage raw_image = null;
 	try {
 		raw_image = ImageIO.read(new File("lib/logo.jpg"));
@@ -110,6 +149,7 @@ public class testWatson {
 	ImageIcon logo_image = new ImageIcon(sized_image);
 	logo.setIcon(logo_image);
 	top_panel.add(logo);
+	*/
 	// Application name
 	JLabel app_name = new JLabel("Speach to Text for IBM");
 	app_name.setFont(new Font("Tahoma", Font.BOLD, 15));
@@ -127,7 +167,7 @@ public class testWatson {
 	JLabel user_label = new JLabel("User");
 	user_panel.add(user_label);
 	JTextArea user = new JTextArea();
-	user.setText("Guest");
+	user.setText(sender);
 	user_panel.add(user);
 	user.setColumns(10);
 	// Chat panel (CENTER)
@@ -140,7 +180,7 @@ public class testWatson {
 	KeyListener keyListener = new KeyListener() {
 	      public void keyPressed(KeyEvent keyEvent) { }
 	      public void keyReleased(KeyEvent keyEvent) { }
-	      public void keyTyped(KeyEvent keyEvent) { if (keyEvent.getKeyChar() == '\n') { send(chat, user); } }
+	      public void keyTyped(KeyEvent keyEvent) { if (keyEvent.getKeyChar() == '\n') { send(chat, sender, msgQueue); } }
 	};
 	chat.addKeyListener(keyListener);
 	chat_panel.add(chat);
@@ -151,7 +191,7 @@ public class testWatson {
 	JButton send = new JButton("Send");
 	send.addActionListener(new ActionListener()
 	{
-		public void actionPerformed(ActionEvent e) { send(chat, user); }
+		public void actionPerformed(ActionEvent e) { send(chat, sender, msgQueue); }
 	});
 	send_panel.add(send);
 	// Start button
@@ -194,10 +234,21 @@ public class testWatson {
 	    	String username = user.getText();
 	    	if (username == null) username = "Guest";
 	        if (breakSpeech && showenable) {
-	        	if (lan_select == "disable") textArea.append(time()+tab+username+" : "+trans+tab+tab+newline+newline);
+	        	if (lan_select == "disable") {
+	        		String final_text = time()+tab+sender+" : "+trans+tab+tab+newline+newline;
+	        		TextPacket packetToServer = new TextPacket();
+	        		packetToServer.message = final_text;
+	        		//packetToServer.sender = sender;
+	        		msgQueue.add(packetToServer);
+	        	}
 	        	else {
 	        		text = translator.translte(trans, "en", lan_select);
-	        		textArea.append(time()+tab+username+" : "+trans+tab+tab+newline+"["+lan+"]"+tab+text+newline+newline);
+	        		String final_text = time()+tab+sender+" : "+trans+tab+tab+newline+"["+lan+"]"+tab+text+newline+newline;
+	        		//textArea.append(final_text);
+	        		TextPacket packetToServer = new TextPacket();
+	        		packetToServer.message = final_text;
+	        		//packetToServer.sender = sender;
+	        		msgQueue.add(packetToServer);
 	        	}
 	        }
 
@@ -252,11 +303,14 @@ public class testWatson {
 	  return lan_selection;
   }
   
-  public static void send(JTextArea chat, JTextArea user) {
+  public static void send(JTextArea chat, String sender, BlockingQueue<TextPacket> msgQueue) {
 	String m = chat.getText();
-	String username = user.getText();
 	if (m != null) {
-		textArea.append(time()+tab+username+" : "+m+newline);
+		String final_text = time()+tab+sender+" : "+m+newline;
+		TextPacket packetToServer = new TextPacket();
+		packetToServer.message = final_text;
+		//packetToServer.sender = sender;
+		msgQueue.add(packetToServer);
 		chat.setText("");
 	}
   }

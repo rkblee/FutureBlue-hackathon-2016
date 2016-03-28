@@ -6,7 +6,7 @@ import java.net.Socket;
 
 public class ClientListener extends Thread {
 
-	private ObjectInputStream ois;
+	public ObjectInputStream ois;
 
 	public ClientListener(Socket socket) {
 		super("ClientListener");

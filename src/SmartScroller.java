@@ -1,5 +1,3 @@
-package watson;
-
 import java.awt.Component;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
