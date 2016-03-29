@@ -4,11 +4,11 @@ import javax.sound.sampled.AudioFormat;
 
 public class AudioUtil {
     public static AudioFormat getAudioFormat() {
-        float sampleRate = 48000.0F;
-        int sampleSizeBits = 16;
-        int channels = 2;
+        float sampleRate = 8000.0F;
+        int sampleSizeBits = 8;
+        int channels = 1;
         boolean signed = true;
-        boolean bigEndian = true;
+        boolean bigEndian = false;
 
         return new AudioFormat(sampleRate, sampleSizeBits, channels, signed, bigEndian);
     }
