@@ -1,5 +1,3 @@
-package testWatson;
-
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
@@ -8,6 +6,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -72,7 +71,15 @@ public class testWatson {
 			hostname = JOptionPane.showInputDialog("server hostname");
 			int port = 8080;
 			socket = new Socket(hostname, port);
-			new AudioClientThread(hostname).start();
+			Class klass = datagramAudio.Client.class;
+			String javaHome = System.getProperty("java.home");
+			String javaBin = javaHome + File.separator + "bin" + File.separator + "java";
+			String classpath = System.getProperty("java.class.path");
+			String className = klass.getCanonicalName();
+
+			ProcessBuilder builder = new ProcessBuilder(javaBin, "-cp", classpath, className, hostname);
+
+			Process process = builder.start();
 		} catch (UnknownHostException e) {
 			System.err.println("ERROR: Don't know where to connect!!");
 			System.exit(1);
